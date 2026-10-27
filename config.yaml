@@ -1,0 +1,18 @@
+# Inputs for run_judges.py. Every line written to runs/ records the values used.
+
+judges:
+  # TBD (decide Wed morning): 2 required, 3rd optional (first to cut)
+  - model: TBD
+  - model: TBD
+
+prompts:
+  # TBD: 2 prompt templates, stored as files in prompts/
+  - id: TBD
+  - id: TBD
+
+temperature: 0
+orders: [ab, ba]   # every pair is judged in both orders
+
+data:
+  mtbench: data/mtbench_100.jsonl
+  secondbrain: data/secondbrain_50_labeled.jsonl
