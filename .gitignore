@@ -11,3 +11,6 @@ wheels/
 
 # Secrets
 .env
+
+# Personal notes (Second Brain labelling set)
+data/secondbrain_*.jsonl
