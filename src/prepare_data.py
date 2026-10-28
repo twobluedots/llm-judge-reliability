@@ -3,14 +3,21 @@
 A pair is (question, model_x, model_y) with model names sorted, so votes cast in
 either order are merged. The human label is the majority vote, or tie when there
 is no majority. All votes are kept for human-human agreement later.
+
+Also loads and validates my Second Brain labels (load_secondbrain):
+
+    uv run python src/prepare_data.py --secondbrain
 """
 
+import argparse
 import json
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from datasets import load_dataset
+
+from label_secondbrain import FAIL_TAGS, ITEMS as SB_ITEMS, LABELED as SB_LABELED
 
 SEED = 42
 N_PAIRS = 100
@@ -157,7 +164,74 @@ def print_summary(all_pairs, chosen):
     print("Gap:", dict(sorted(Counter(p["gap"] for p in chosen).items())))
 
 
+def read_jsonl(path):
+    return [json.loads(l) for l in path.open() if l.strip()]
+
+
+def fail_tag(note):
+    words = note.split()
+    return words[0].rstrip(":,-") if words else ""
+
+
+def load_secondbrain():
+    """Items from secondbrain_50.jsonl merged with my labels; raises if they don't line up.
+
+    Item content comes from the item file; only label fields come from the labelled file,
+    after checking the text the label was given for is unchanged.
+    """
+    items = read_jsonl(SB_ITEMS)
+    labels = {r["item_id"]: r for r in read_jsonl(SB_LABELED)}
+    item_ids = [it["item_id"] for it in items]
+    problems = []
+
+    missing = [i for i in item_ids if i not in labels]
+    orphaned = sorted(set(labels) - set(item_ids))
+    if missing:
+        problems.append(f"unlabelled items: {missing}")
+    if orphaned:
+        problems.append(f"labels for items not in {SB_ITEMS.name}: {orphaned}")
+
+    merged = []
+    for pos, it in enumerate(items, 1):
+        r = labels.get(it["item_id"])
+        if r is None:
+            continue
+        changed = [k for k in ("question", "answer", "retrieved_context") if r[k] != it[k]]
+        if changed:
+            problems.append(f"item {pos} ({it['item_id']}): changed since labelling: {', '.join(changed)}")
+        if r["label"] not in ("pass", "fail"):
+            problems.append(f"item {pos}: label {r['label']!r} is not pass/fail")
+        if not it.get("question_group"):
+            problems.append(f"item {pos}: no question_group")
+        merged.append(it | {k: r[k] for k in ("label", "note", "rubric_version", "labeled_at")})
+
+    if problems:
+        raise ValueError("Second Brain labels don't line up:\n  " + "\n  ".join(problems))
+
+    for pos, it in enumerate(merged, 1):
+        if it["label"] == "fail" and fail_tag(it["note"]) not in FAIL_TAGS:
+            print(f"WARNING: item {pos} fail note has no valid tag: {it['note']!r}")
+    return merged
+
+
+def print_secondbrain_summary(items):
+    print(f"Second Brain: {len(items)} items, {len({i['question_group'] for i in items})} question groups")
+    print("Labels:", dict(Counter(i["label"] for i in items)),
+          f"fail rate {sum(i['label'] == 'fail' for i in items) / len(items):.0%}")
+    print("Per source:", dict(Counter((i["source"], i["label"]) for i in items)))
+    print("Fail tags:", dict(Counter(fail_tag(i["note"]) for i in items if i["label"] == "fail")))
+    print("Rubric versions:", dict(Counter(i["rubric_version"] for i in items)))
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--secondbrain", action="store_true", help="only validate the Second Brain labels")
+    args = parser.parse_args()
+
+    if args.secondbrain:
+        print_secondbrain_summary(load_secondbrain())
+        return
+
     pairs = add_fields(group_into_pairs(load_turn1_votes()))
     chosen = sample(pairs)
     write_jsonl(chosen)
