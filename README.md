@@ -26,6 +26,13 @@ Human–human agreement (MT-Bench ceiling): _TBD_
 
 _TBD_
 
+## Reproducibility notes
+
+- `gpt-4o-mini-2024-07-18` is deprecated and leaves OpenAI's API on 14 Jan 2027; after that
+  its runs can only be reproduced from the cached lines in `runs/`.
+- Claude models reject `temperature`, so Haiku runs use default sampling. A 20-pair repeat run
+  measures how much of its flip rate is sampling noise.
+
 ## How to run
 
 ```bash

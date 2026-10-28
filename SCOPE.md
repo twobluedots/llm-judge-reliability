@@ -17,10 +17,12 @@ How far can you trust an LLM judge, and when does it fail?
   - aim for ~30–40% fails (otherwise kappa is unstable)
 
 ## Setup (locked for the week)
-- Judge models: TBD (2 required, 3rd optional)
-- Judge prompts: TBD (2)
-- Temperature 0, exact model versions recorded
-- Every call cached in runs/ keyed by (item, prompt, model, order)
+- Judge models: claude-haiku-5-5 (thinking off) + gpt-4o-mini-2024-07-18; 3rd optional
+- Judge prompts: TBD (2 per dataset)
+- Temperature 0 where the API allows it (gpt-4o-mini); Claude rejects temperature,
+  so default sampling, recorded per call. 20 MT-Bench pairs re-judged as a noise baseline.
+- Exact model versions recorded
+- Every call cached in runs/ keyed by (item, prompt, model, order, repeat)
 
 ## Pipeline
 Inputs (written by me, in git): data/, prompts/, config.yaml
@@ -33,6 +35,11 @@ Outputs (written by scripts): runs/, results/
 Analysis only reads runs/, so re-running it never costs an API call.
 
 ## Decisions
+- Judges: Haiku 5.5 + gpt-4o-mini, same price tier, different families.
+  Why: no spend on a strong judge this week; clean family/self-preference comparison
+  (gpt-4o-mini generated the Second Brain answers). Third slot stays open.
+- Haiku thinking off.
+  Why: gpt-4o-mini doesn't reason, so family isn't confounded with reasoning. Thinking-on is a later variant.
 - Mixed protocol: pairwise for MT-Bench, pointwise for Second Brain.
   Why: matches how each dataset is labelled; covers both real-world judge uses.
 - Agreement reported with and without ties.

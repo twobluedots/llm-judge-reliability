@@ -14,3 +14,6 @@ wheels/
 
 # Personal notes (Second Brain labelling set)
 data/secondbrain_*.jsonl
+
+# Judge outputs (cached API calls); Second Brain ones quote personal notes
+runs/*.jsonl

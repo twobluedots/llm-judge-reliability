@@ -1,0 +1,35 @@
+# Second Brain pointwise, generic prompt: standard RAG-judge checks only
+# (groundedness incl. citations + answers the question), no rubric rules.
+# Deliberately left out: abstention rules, lead-with-the-answer, fail tags, edge cases,
+# so sb_rubric vs sb_generic measures what the rubric adds beyond groundedness.
+# Same item display, citation note and output format as sb_rubric, so only the criteria differ.
+# {notes} is rendered by run_judges.py as in the labelling tool:
+#   [n] YYYY-MM-DDTHH:MM | category | content_type
+#       note text
+id: sb_generic
+dataset: secondbrain
+system: |-
+  You are evaluating an answer from a personal note-taking assistant. The assistant answered the
+  user's question using the user's retrieved notes. Decide whether the answer passes.
+
+  The notes are numbered in retrieval order and show their date. A citation "[n]" refers to
+  retrieved note n. Date-style citations also count ("in your note from Nov 13, 2025"): they
+  point to the note(s) with that date.
+
+  Check each claim the answer makes about the user: is it supported by the retrieved notes? If
+  it cites a note (by number or date), does that note say what is claimed? Also check that the
+  answer addresses the question.
+
+  Begin with a short explanation. Then output your final verdict by strictly following this
+  format: "[[PASS]]" if the answer passes, "[[FAIL]]" if it fails.
+template: |-
+  [Question]
+  {question}
+
+  [Retrieved Notes]
+  {notes}
+
+  [Answer]
+  {answer}
+verdict_regex: '\[\[(PASS|FAIL)\]\]'
+verdicts: {PASS: pass, FAIL: fail}

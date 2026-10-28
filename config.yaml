@@ -1,17 +1,37 @@
 # Inputs for run_judges.py. Every line written to runs/ records the values used.
 
 judges:
-  # TBD (decide Wed morning): 2 required, 3rd optional (first to cut)
-  - model: TBD
-  - model: TBD
+  # Same price tier, different families (decided Wed 28 Oct).
+  - id: haiku
+    provider: anthropic
+    model: claude-haiku-5-5
+    temperature: null    # Claude API rejects temperature; default sampling, recorded per call
+    thinking: disabled   # matches gpt-4o-mini (no reasoning); thinking-on is a possible later variant
+    effort: high         # disabled thinking is only allowed at effort <= high
+  - id: gpt4omini
+    provider: openai
+    model: gpt-4o-mini-2024-07-18   # generated the Second Brain answers -> self-preference check
+    temperature: 0
+  # 3rd judge: optional, first to cut (candidate: claude-opus-5-5 on MT-Bench only)
 
 prompts:
-  # TBD: 2 prompt templates, stored as files in prompts/
-  - id: TBD
-  - id: TBD
+  # Grouped by dataset; each id is a template file in prompts/
+  mtbench:
+    - id: mtb_paper      # FastChat pair-v2, verbatim (paper baseline)
+    - id: mtb_nodebias   # same, minus the position/length debiasing sentences
+  secondbrain:
+    - id: sb_generic     # minimal generic pass/fail
+    - id: sb_rubric      # built on prompts/secondbrain_rubric.md v1.1
 
-temperature: 0
 orders: [ab, ba]   # every pair is judged in both orders
+
+# Sampling-noise baseline: re-judge a fixed subset again in the same order,
+# so Haiku's flip rate can be compared with its run-to-run disagreement.
+repeats:
+  dataset: mtbench
+  n_items: 20
+  order: ab
+  seed: 42
 
 data:
   mtbench: data/mtbench_100.jsonl
