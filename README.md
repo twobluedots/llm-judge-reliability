@@ -44,3 +44,17 @@ uv run src/error_analysis.py   # judge-human disagreements; --show misses / fals
 
 `error_analysis.py` writes a judge–human disagreement review page (every answer, each judge's
 verdict and reasoning) to `reports/`. It quotes personal notes, so `reports/` is gitignored.
+
+## Data and licenses
+
+Code in this repository is MIT-licensed (see `LICENSE`). Two inputs come from elsewhere and keep
+their own licenses:
+
+- `data/mtbench_100.jsonl`: a 100-pair, turn-1 sample of
+  [lmsys/mt_bench_human_judgments](https://huggingface.co/datasets/lmsys/mt_bench_human_judgments)
+  (CC BY 4.0), reshaped by `src/prepare_data.py`. From Zheng et al. 2023,
+  "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685)).
+- `prompts/mtb_paper.yaml`: the "pair-v2" judge prompt copied verbatim from
+  [FastChat](https://github.com/lm-sys/FastChat) (Apache-2.0); `prompts/mtb_nodebias.yaml` is a modified copy.
+
+The Second Brain data (personal notes and their labels) is not included.
