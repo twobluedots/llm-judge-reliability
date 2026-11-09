@@ -42,6 +42,8 @@ def load_jsonl(path):
 def load_runs(dataset):
     """All runs/<judge>__<dataset>.jsonl in one DataFrame; stops if the cache is inconsistent."""
     rows = [r for p in sorted(RUNS.glob(f"*__{dataset}.jsonl")) for r in load_jsonl(p)]
+    if not rows:
+        sys.exit(f"No cached {dataset} runs in runs/: run `uv run src/run_judges.py --run` first")
     runs = pd.DataFrame(rows)
     shas = runs.groupby("prompt_id")["prompt_sha"].nunique()
     if (shas > 1).any():
@@ -348,7 +350,11 @@ def main():
     print("Caveat: multi-vote pairs are not a random subset, so judges are scored on these same pairs only.")
     print(f"\nWrote {(RESULTS / 'mtbench_human_ceiling.csv').relative_to(ROOT)}\n")
 
-    labels = pd.DataFrame(load_jsonl(ROOT / config["data"]["secondbrain"]))
+    sb_path = ROOT / config["data"]["secondbrain"]
+    if not sb_path.exists():  # personal notes, not in the repo
+        print(f"Second Brain skipped: {sb_path.relative_to(ROOT)} not found (private data, not in the repo).")
+        return
+    labels = pd.DataFrame(load_jsonl(sb_path))
     runs = load_runs("secondbrain")
     print("Second Brain coverage (cached / planned):")
     for judge, prompt, got, expected in coverage(runs, config, "secondbrain", len(labels)):

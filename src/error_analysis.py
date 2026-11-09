@@ -17,6 +17,7 @@ written to reports/, which is gitignored; never commit or publish it.
 """
 
 import argparse
+import sys
 from html import escape
 
 import pandas as pd
@@ -149,7 +150,10 @@ def main():
     args = ap.parse_args()
 
     config = yaml.safe_load(CONFIG.read_text())
-    items = load_jsonl(ROOT / config["data"]["secondbrain"])
+    sb_path = ROOT / config["data"]["secondbrain"]
+    if not sb_path.exists():
+        sys.exit(f"{sb_path.relative_to(ROOT)} not found: this page needs the private Second Brain data.")
+    items = load_jsonl(sb_path)
     labels = pd.DataFrame(items)
     df = join_labels(load_runs("secondbrain"), labels)  # same checks as analyze.py
     runs = {(r["item_id"], r["judge_id"], r["prompt_id"]): r for r in df.to_dict("records")}

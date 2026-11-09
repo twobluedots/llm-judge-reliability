@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import analyze
 from analyze import (accuracy, bootstrap_ci, cohen_kappa, combine_orders, fail_tag, judges_for, kappa_rows,
-                     missed_fail_rows, mtbench_agreement, mtbench_human_ceiling, mtbench_vs_votes,
+                     load_runs, missed_fail_rows, mtbench_agreement, mtbench_human_ceiling, mtbench_vs_votes,
                      secondbrain_agreement, secondbrain_by_tag, secondbrain_diffs)
 
 
@@ -66,6 +67,12 @@ def test_secondbrain_by_tag():
 def test_unknown_fail_tag_stops():
     with pytest.raises(SystemExit):
         fail_tag("hallucinated - typo in tag")
+
+
+def test_no_cached_runs_stops_with_hint(tmp_path, monkeypatch):
+    monkeypatch.setattr(analyze, "RUNS", tmp_path)  # an empty runs/
+    with pytest.raises(SystemExit, match="run_judges.py --run"):
+        load_runs("mtbench")
 
 
 def test_judges_for_respects_datasets_field():

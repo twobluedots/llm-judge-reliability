@@ -30,7 +30,8 @@ _TBD_
 ## Reproducibility notes
 
 - `gpt-4o-mini-2024-07-18` is deprecated and leaves OpenAI's API on 14 Jan 2027; after that
-  its runs can only be reproduced from cached judge calls (`runs/*.jsonl`, not in the repo yet).
+  its runs can only be reproduced from the cached judge calls. The MT-Bench ones are in `runs/`;
+  the Second Brain ones quote personal notes and stay local.
 - Claude models reject `temperature`, so Haiku runs use default sampling. A 20-pair repeat run
   measures how much of its flip rate is sampling noise.
 
@@ -47,7 +48,8 @@ uv run src/error_analysis.py         # judge-human disagreements; --show misses 
 ```
 
 `run_judges.py` takes `--dataset`, `--judge` and `--limit` to run a subset. Without the private
-Second Brain data only the MT-Bench half can be run.
+Second Brain data only the MT-Bench half runs: `analyze.py` reproduces the MT-Bench tables from the
+cached calls in `runs/` and skips Second Brain, and `error_analysis.py` (Second Brain only) exits.
 
 `error_analysis.py` writes a judge–human disagreement review page (every answer, each judge's
 verdict and reasoning) to `reports/`. It quotes personal notes, so `reports/` is gitignored.
