@@ -39,7 +39,7 @@ orders: [ab, ba]   # every pair is judged in both orders
 # so Haiku's flip rate can be compared with its run-to-run disagreement.
 repeats:
   dataset: mtbench
-  n_items: 20
+  n_items: 100   # all pairs (was 20): noise and flip rate measured on the same pairs (decided 9 Nov)
   order: ab
   seed: 42
 

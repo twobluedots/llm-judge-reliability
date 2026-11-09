@@ -10,9 +10,10 @@ import pandas as pd
 import pytest
 
 import analyze
-from analyze import (accuracy, bootstrap_ci, cohen_kappa, combine_orders, fail_tag, judges_for, kappa_rows,
-                     load_runs, missed_fail_rows, mtbench_agreement, mtbench_human_ceiling, mtbench_vs_votes,
-                     secondbrain_agreement, secondbrain_by_tag, secondbrain_diffs)
+from analyze import (accuracy, bootstrap_ci, cohen_kappa, combine_orders, exact_binom_p, fail_tag, judges_for,
+                     kappa_rows, load_runs, missed_fail_rows, mtbench_agreement, mtbench_human_ceiling,
+                     mtbench_position_bias, mtbench_vs_votes, position_flags, secondbrain_agreement,
+                     secondbrain_by_tag, secondbrain_diffs)
 
 
 def test_kappa_two_labels():
@@ -189,3 +190,66 @@ def test_secondbrain_diffs_paired():
     assert len(d) == 4 * 3  # j r-g, k r-g, j-k on g, j-k on r; three metrics each
     assert (d[["diff_a_minus_b", "lo", "hi"]] == 0).all().all()
     assert not d["excludes_0"].any()
+
+
+def mt_runs_with_positions(calls):
+    """Like mt_runs, plus the positions field run_judges.py writes (ab: A=x; ba: A=y)."""
+    runs = mt_runs(calls)
+    runs["positions"] = [{"A": "x", "B": "y"} if o == "ab" else {"A": "y", "B": "x"} for o in runs["order"]]
+    return runs
+
+
+# Calls are (pair, order, repeat, verdict); the repeat is in ab.
+#   clean:  x / x / x       no flip, no noise
+#   hard1:  x / y / x       ab: A=x won (first); ba: A=y won (first) -> hard flip toward first
+#   soft2:  y / tie / y     ab: B=y won (second); ba: tie -> soft flip toward second
+#   noisy:  x / x / y       repeat disagrees, orders agree -> noise only
+#   null:   None / x / x    unparsed -> kept as null, no flags
+#   norep:  x / x / -       no repeat call -> not in the sample at all
+POSITION_CALLS = [("clean", "ab", 0, "x"), ("clean", "ba", 0, "x"), ("clean", "ab", 1, "x"),
+                  ("hard1", "ab", 0, "x"), ("hard1", "ba", 0, "y"), ("hard1", "ab", 1, "x"),
+                  ("soft2", "ab", 0, "y"), ("soft2", "ba", 0, "tie"), ("soft2", "ab", 1, "y"),
+                  ("noisy", "ab", 0, "x"), ("noisy", "ba", 0, "x"), ("noisy", "ab", 1, "y"),
+                  ("null", "ab", 0, None), ("null", "ba", 0, "x"), ("null", "ab", 1, "x"),
+                  ("norep", "ab", 0, "x"), ("norep", "ba", 0, "x")]
+
+
+def test_position_flags():
+    got = position_flags(mt_runs_with_positions(POSITION_CALLS)).set_index("item_id")
+    assert "norep" not in got.index
+    assert got.loc["null", "null"] and pd.isna(got.loc["null", "flip"])
+    ok = got.drop("null")
+    assert ok["flip"].to_dict() == {"clean": False, "hard1": True, "noisy": False, "soft2": True}
+    assert ok["noise"].to_dict() == {"clean": False, "hard1": False, "noisy": True, "soft2": False}
+    assert ok.loc["hard1", "direction"] == "first" and ok.loc["soft2", "direction"] == "second"
+    assert pd.isna(ok.loc["clean", "direction"]) and pd.isna(ok.loc["noisy", "direction"])
+    assert ok["hard"].to_dict() == {"clean": False, "hard1": True, "noisy": False, "soft2": False}
+
+
+def test_position_flags_repeat_in_ba():
+    # Repeat in ba: noise compares ba r0 with ba r1, and the ab r1 call is ignored.
+    runs = mt_runs_with_positions([("a", "ab", 0, "x"), ("a", "ba", 0, "x"), ("a", "ba", 1, "y")])
+    got = position_flags(runs, repeat_order="ba").set_index("item_id")
+    assert not got.loc["a", "flip"] and got.loc["a", "noise"]
+    assert position_flags(runs, repeat_order="ab").empty
+
+
+def test_exact_binom_p():
+    assert exact_binom_p(0, 0) == 1.0
+    assert exact_binom_p(3, 3) == 1.0
+    assert exact_binom_p(5, 0) == pytest.approx(2 / 32)
+    # 12 vs 3: 2 * (C(15,0)+C(15,1)+C(15,2)+C(15,3)) / 2^15 = 2 * 576 / 32768
+    assert exact_binom_p(12, 3) == pytest.approx(1152 / 32768)
+    assert exact_binom_p(3, 12) == exact_binom_p(12, 3)
+
+
+def test_mtbench_position_bias():
+    row = mtbench_position_bias(position_flags(mt_runs_with_positions(POSITION_CALLS))).iloc[0]
+    assert (row["n"], row["n_null"]) == (4, 1)
+    assert (row["flip"], row["noise"], row["gap"]) == (0.5, 0.25, 0.25)
+    assert (row["flip_only"], row["noise_only"], row["mcnemar_p"]) == (2, 1, 1.0)
+    assert (row["to_first"], row["to_second"], row["direction_p"]) == (1, 1, 1.0)
+    assert (row["hard"], row["soft"]) == (1, 1)
+    assert row["gap_lo"] <= row["gap"] <= row["gap_hi"]
+    again = mtbench_position_bias(position_flags(mt_runs_with_positions(POSITION_CALLS))).iloc[0]
+    assert (again["gap_lo"], again["gap_hi"]) == (row["gap_lo"], row["gap_hi"])

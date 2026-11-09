@@ -20,7 +20,8 @@ How far can you trust an LLM judge, and when does it fail?
 - Judge models: claude-haiku-5-5 (thinking off) + gpt-4o-mini-2024-07-18; 3rd optional
 - Judge prompts: TBD (2 per dataset)
 - Temperature 0 where the API allows it (gpt-4o-mini); Claude rejects temperature,
-  so default sampling, recorded per call. 20 MT-Bench pairs re-judged as a noise baseline.
+  so default sampling, recorded per call. All 100 MT-Bench pairs re-judged as a noise baseline
+  (first 20, extended 9 Nov, see Decisions).
 - Exact model versions recorded
 - Every call cached in runs/ keyed by (item, prompt, model, order, repeat)
 
@@ -48,6 +49,10 @@ Analysis only reads runs/, so re-running it never costs an API call.
   Why: lost Monday; generic-vs-rubric comparison is outside the core question.
 - Every pair judged in both orders from the start.
   Why: agreement and position bias come from the same runs, recovering the lost day.
+- Same-order repeat run on all 100 MT-Bench pairs, not 20 (9 Nov; ab order only, 320 extra calls).
+  Why: 20 was a budget pick with no stated reason; 4/20 has a 95% CI of ~6–44%, too wide to
+  tell Haiku's 4–8% flip rate from noise, and noise varies by pair, so it must be measured on
+  the same pairs as the flips. gpt-4o-mini at temperature 0 also disagreed with itself, so both judges need it.
 
 ## Plan (Tue 27 – Fri 30 Oct)
 | Day | Done when this exists |

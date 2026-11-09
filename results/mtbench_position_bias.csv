@@ -1,0 +1,5 @@
+judge,prompt,n,n_null,noise,flip,gap,gap_lo,gap_hi,flip_only,noise_only,mcnemar_p,to_first,to_second,direction_p,hard,soft
+gpt4omini,mtb_nodebias,100,0,0.040,0.120,0.080,0.000,0.160,12,4,0.077,7,5,0.774,11,1
+gpt4omini,mtb_paper,100,0,0.050,0.140,0.090,0.020,0.170,12,3,0.035,10,4,0.180,12,2
+haiku,mtb_nodebias,100,0,0.040,0.040,0.000,-0.050,0.050,3,3,1.000,2,2,1.000,1,3
+haiku,mtb_paper,100,0,0.080,0.080,0.000,-0.060,0.060,5,5,1.000,7,1,0.070,4,4

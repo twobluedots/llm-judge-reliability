@@ -8,6 +8,7 @@ never dropped silently.
 """
 
 import json
+import math
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -317,6 +318,87 @@ def mtbench_human_ceiling(runs, pairs):
     return pd.concat([pd.DataFrame(rows), judges], ignore_index=True)
 
 
+def winning_position(verdict, positions):
+    """Which slot the verdict picked: "first" (shown as A), "second" (B), "tie", or None if unparsed."""
+    if verdict is None or (isinstance(verdict, float) and math.isnan(verdict)):
+        return None
+    if verdict == "tie":
+        return "tie"
+    return "first" if verdict == positions["A"] else "second"
+
+
+def position_flags(runs, repeat_order="ab"):
+    """One row per judge x prompt x pair, for pairs with a same-order repeat call.
+
+    Three calls per pair: both orders (repeat 0) and the repeat (repeat 1, in repeat_order only,
+    so noise is measured in that order).
+      flip:      the two orders give different verdicts (noise + any position bias)
+      noise:     the repeat gives a different verdict from the same order's first call
+      direction: for a flip, the slot it favoured. A flip always has one slot winning in at least one
+                 order and the other slot in neither, so "first" or "second" is always defined.
+      hard:      a flip where the same slot won outright in both orders (soft: one order said tie)
+    A pair with any of the three verdicts unparsed is kept with null=True and no flags.
+    """
+    swapped_order = "ba" if repeat_order == "ab" else "ab"
+    calls = runs[(runs["repeat"] == 0) | (runs["order"] == repeat_order)]
+    calls = calls.assign(pos=[winning_position(v, p) for v, p in zip(calls["verdict"], calls["positions"])],
+                         present=True)
+    wide = calls.pivot(index=["judge_id", "prompt_id", "item_id"], columns=["order", "repeat"],
+                       values=["verdict", "pos", "present"])
+    first, swapped, again = (repeat_order, 0), (swapped_order, 0), (repeat_order, 1)
+    wide = wide.reindex(columns=pd.MultiIndex.from_tuples(
+        [(v, *c) for v in ("verdict", "pos", "present") for c in (first, swapped, again)]))
+    wide = wide[wide[("present", *again)].notna()]  # pairs without a repeat call are not in the sample
+
+    v1, v2, v3 = (wide[("verdict", *c)] for c in (first, swapped, again))
+    p1, p2 = wide[("pos", *first)], wide[("pos", *swapped)]
+    null = v1.isna() | v2.isna() | v3.isna()
+    flip, noise = (v1 != v2) & ~null, (v1 != v3) & ~null
+    favours_second = (p1 == "second") | (p2 == "second")
+    direction = pd.Series(np.where(favours_second, "second", "first"), index=wide.index).where(flip, None)
+    hard = flip & (p1 == p2) & (p1 != "tie")
+    out = pd.DataFrame({"null": null, "flip": flip.where(~null, None), "noise": noise.where(~null, None),
+                        "direction": direction, "hard": hard.where(~null, None)})
+    return out.reset_index()
+
+
+def exact_binom_p(b, c):
+    """Two-sided exact test of b vs c against 50/50 (exact McNemar on discordant pairs; sign test)."""
+    n = b + c
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(b, c) + 1)) / 2 ** n
+    return min(1.0, 2 * tail)
+
+
+def mtbench_position_bias(flags):
+    """Flip rate vs same-order noise per judge x prompt, on the same pairs.
+
+    gap = flip - noise: the part of the flip rate noise can't explain. Its CI is a bootstrap over
+    pairs (paired: each resample draws the same pairs for both rates); mcnemar_p tests flip_only vs
+    noise_only pairs exactly. direction_p tests flips toward first vs second against 50/50, which is
+    what noise alone would give.
+    """
+    rows = []
+    for (judge, prompt), g in flags.groupby(["judge_id", "prompt_id"]):
+        ok = g[~g["null"]]
+        f, z = ok["flip"].to_numpy(dtype=int), ok["noise"].to_numpy(dtype=int)
+        d = f - z
+        lo, hi, _ = bootstrap_ci(len(d), lambda idx: d[idx].mean(axis=1)) if len(d) else (np.nan, np.nan, 0)
+        flip_only, noise_only = int(((f == 1) & (z == 0)).sum()), int(((f == 0) & (z == 1)).sum())
+        to_first, to_second = int((ok["direction"] == "first").sum()), int((ok["direction"] == "second").sum())
+        hard = int(ok["hard"].astype(bool).sum())
+        rows.append({"judge": judge, "prompt": prompt, "n": len(ok), "n_null": int(g["null"].sum()),
+                     "noise": z.mean() if len(z) else np.nan, "flip": f.mean() if len(f) else np.nan,
+                     "gap": d.mean() if len(d) else np.nan, "gap_lo": lo, "gap_hi": hi,
+                     "flip_only": flip_only, "noise_only": noise_only,
+                     "mcnemar_p": exact_binom_p(flip_only, noise_only),
+                     "to_first": to_first, "to_second": to_second,
+                     "direction_p": exact_binom_p(to_first, to_second),
+                     "hard": hard, "soft": int(f.sum()) - hard})
+    return pd.DataFrame(rows)
+
+
 def main():
     config = yaml.safe_load(CONFIG.read_text())
     RESULTS.mkdir(exist_ok=True)
@@ -349,7 +431,16 @@ def main():
           "(n = comparisons; paper = turn 1):")
     print(ceiling.to_markdown(index=False, floatfmt=".2f"))
     print("Caveat: multi-vote pairs are not a random subset, so judges are scored on these same pairs only.")
-    print(f"\nWrote {(RESULTS / 'mtbench_human_ceiling.csv').relative_to(ROOT)}\n")
+    print(f"\nWrote {(RESULTS / 'mtbench_human_ceiling.csv').relative_to(ROOT)}")
+
+    bias = mtbench_position_bias(position_flags(mt, config["repeats"]["order"]))
+    bias.to_csv(RESULTS / "mtbench_position_bias.csv", index=False, float_format=CSV_FLOAT)
+    print(f"\nMT-Bench position bias: order flip rate vs same-order repeat noise on the same pairs "
+          f"(gap CI: bootstrap, {BOOT_N:,} resamples of pairs, seed {BOOT_SEED}; p-values exact):")
+    print(bias.to_markdown(index=False, floatfmt=".3f"))
+    if bias["n_null"].sum():
+        print("warning: pairs with an unparsed verdict left out (see n_null)")
+    print(f"\nWrote {(RESULTS / 'mtbench_position_bias.csv').relative_to(ROOT)}\n")
 
     sb_path = ROOT / config["data"]["secondbrain"]
     if not sb_path.exists():  # personal notes, not in the repo
