@@ -4,7 +4,8 @@ How far can you trust an LLM judge, and when does it fail?
 
 ## Results
 
-_Filled in Fri 30 Oct._
+_Work in progress: the tables below are filled in as results are written up. The latest
+numbers are in `results/` (written by `src/analyze.py`)._
 
 ### Agreement with human labels
 
@@ -29,18 +30,24 @@ _TBD_
 ## Reproducibility notes
 
 - `gpt-4o-mini-2024-07-18` is deprecated and leaves OpenAI's API on 14 Jan 2027; after that
-  its runs can only be reproduced from the cached lines in `runs/`.
+  its runs can only be reproduced from cached judge calls (`runs/*.jsonl`, not in the repo yet).
 - Claude models reject `temperature`, so Haiku runs use default sampling. A 20-pair repeat run
   measures how much of its flip rate is sampling noise.
 
 ## How to run
 
+API keys go in `.env` (or the shell): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`.
+
 ```bash
-uv run src/prepare_data.py
-uv run src/run_judges.py
-uv run src/analyze.py
-uv run src/error_analysis.py   # judge-human disagreements; --show misses / false-fails / all
+uv run src/prepare_data.py           # re-samples data/mtbench_100.jsonl (same seed, same file)
+uv run src/run_judges.py             # dry run: prints the prompts and the number of calls
+uv run src/run_judges.py --run       # makes the API calls, cached in runs/
+uv run src/analyze.py                # metrics from runs/ -> results/, no API calls
+uv run src/error_analysis.py         # judge-human disagreements; --show misses / false-fails / all
 ```
+
+`run_judges.py` takes `--dataset`, `--judge` and `--limit` to run a subset. Without the private
+Second Brain data only the MT-Bench half can be run.
 
 `error_analysis.py` writes a judge–human disagreement review page (every answer, each judge's
 verdict and reasoning) to `reports/`. It quotes personal notes, so `reports/` is gitignored.
