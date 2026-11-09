@@ -12,7 +12,17 @@ judges:
     provider: openai
     model: gpt-4o-mini-2024-07-18   # generated the Second Brain answers -> self-preference check
     temperature: 0
-  # 3rd judge: optional, first to cut (candidate: claude-opus-5-5 on MT-Bench only)
+  # Strong-judge check on Second Brain only (decided Wed 28 Oct): MT-Bench already has the
+  # paper's GPT-4 numbers as an anchor. Thinking off for parity with the cheap judges.
+  # Opus 5, not 5.5: 5.5 rejects disabled thinking at every effort level (400); Opus 5 allows it
+  # at effort <= high, and can also run thinking-on later for an off/on comparison.
+  - id: opus
+    provider: anthropic
+    model: claude-opus-5
+    temperature: null
+    thinking: disabled
+    effort: high
+    datasets: [secondbrain]   # optional per judge; default is every dataset under prompts
 
 prompts:
   # Grouped by dataset; each id is a template file in prompts/

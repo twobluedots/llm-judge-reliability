@@ -80,6 +80,8 @@ def build_tasks(config, datasets, judges, limit):
     tasks = []
     for judge in judges:
         for name in datasets:
+            if name not in judge.get("datasets", datasets):  # judge limited to some datasets
+                continue
             for p in config["prompts"][name]:
                 prompt = load_prompt(p["id"])
                 for it in items[name][:limit]:
