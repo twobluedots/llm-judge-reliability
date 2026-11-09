@@ -1,0 +1,17 @@
+judge,prompt,view,ties,n,n_null,accuracy,kappa
+gpt4omini,mtb_nodebias,combined,with,100,0,0.65,0.4605425400739827
+gpt4omini,mtb_nodebias,combined,without,73,0,0.7808219178082192,0.5991763898421415
+gpt4omini,mtb_nodebias,one_call,with,200,0,0.64,0.4355597365945438
+gpt4omini,mtb_nodebias,one_call,without,146,0,0.8287671232876712,0.6567613315779575
+gpt4omini,mtb_paper,combined,with,100,0,0.66,0.47732513451191394
+gpt4omini,mtb_paper,combined,without,73,0,0.7808219178082192,0.6000000000000001
+gpt4omini,mtb_paper,one_call,with,200,0,0.635,0.4278996865203762
+gpt4omini,mtb_paper,one_call,without,146,0,0.8287671232876712,0.6575342465753424
+haiku,mtb_nodebias,combined,with,100,0,0.7,0.5375366116849082
+haiku,mtb_nodebias,combined,without,73,0,0.8356164383561644,0.6891412349183819
+haiku,mtb_nodebias,one_call,with,200,0,0.71,0.5512572533849129
+haiku,mtb_nodebias,one_call,without,146,0,0.8561643835616438,0.7206123564789502
+haiku,mtb_paper,combined,with,100,0,0.7,0.5398067188219051
+haiku,mtb_paper,combined,without,73,0,0.8082191780821918,0.6457538994800693
+haiku,mtb_paper,one_call,with,200,0,0.705,0.5433789954337899
+haiku,mtb_paper,one_call,without,146,0,0.8424657534246576,0.6935012778386274
