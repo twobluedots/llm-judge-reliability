@@ -17,3 +17,9 @@ data/secondbrain_*.jsonl
 
 # Judge outputs (cached API calls); Second Brain ones quote personal notes
 runs/*.jsonl
+
+# Error-analysis pages (src/error_analysis.py) quote personal notes
+reports/
+
+# macOS
+.DS_Store

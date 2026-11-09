@@ -39,4 +39,8 @@ _TBD_
 uv run src/prepare_data.py
 uv run src/run_judges.py
 uv run src/analyze.py
+uv run src/error_analysis.py   # judge-human disagreements; --show misses / false-fails / all
 ```
+
+`error_analysis.py` writes a judge–human disagreement review page (every answer, each judge's
+verdict and reasoning) to `reports/`. It quotes personal notes, so `reports/` is gitignored.
