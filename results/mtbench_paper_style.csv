@@ -1,9 +1,9 @@
 judge,prompt,ties,n,n_null,accuracy,paper
-gpt4omini,mtb_nodebias,with,150,0,0.6466666666666666,0.66
-gpt4omini,mtb_nodebias,without,107,0,0.822429906542056,0.85
-gpt4omini,mtb_paper,with,150,0,0.6866666666666666,0.66
-gpt4omini,mtb_paper,without,109,0,0.8440366972477065,0.85
-haiku,mtb_nodebias,with,150,0,0.68,0.66
-haiku,mtb_nodebias,without,111,0,0.8198198198198198,0.85
-haiku,mtb_paper,with,150,0,0.68,0.66
-haiku,mtb_paper,without,103,0,0.8446601941747572,0.85
+gpt4omini,mtb_nodebias,with,150,0,0.647,0.660
+gpt4omini,mtb_nodebias,without,107,0,0.822,0.850
+gpt4omini,mtb_paper,with,150,0,0.687,0.660
+gpt4omini,mtb_paper,without,109,0,0.844,0.850
+haiku,mtb_nodebias,with,150,0,0.680,0.660
+haiku,mtb_nodebias,without,111,0,0.820,0.850
+haiku,mtb_paper,with,150,0,0.680,0.660
+haiku,mtb_paper,without,103,0,0.845,0.850

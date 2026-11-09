@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config.yaml"
 RUNS = ROOT / "runs"
 RESULTS = ROOT / "results"
+CSV_FLOAT = "%.3f"  # results/ tables are for reading; metrics are recomputed from runs/
 
 KEY = ["item_id", "prompt_id", "judge_id", "order", "repeat"]  # same cache key as run_judges.py
 FAIL_TAGS = ("should-abstain", "unsupported", "off-topic")  # rubric v1.1 fail reasons
@@ -78,7 +79,7 @@ def cohen_kappa(truth, pred):
     truth, pred = pd.Series(truth).reset_index(drop=True), pd.Series(pred).reset_index(drop=True)
     observed = (truth == pred).mean()
     p_truth, p_pred = truth.value_counts(normalize=True), pred.value_counts(normalize=True)
-    chance = sum(p_truth.get(l, 0) * p_pred.get(l, 0) for l in set(truth) | set(pred))
+    chance = sum(p_truth.get(l, 0) * p_pred.get(l, 0) for l in sorted(set(truth) | set(pred)))  # fixed order: same float sum every run
     if chance == 1:
         return float("nan")
     return float((observed - chance) / (1 - chance))
@@ -330,20 +331,20 @@ def main():
     agree = mtbench_agreement(mt, pairs)
     if agree["n_null"].sum():
         print("warning: unparsed verdicts left out (see n_null)")
-    agree.to_csv(RESULTS / "mtbench_agreement.csv", index=False)
+    agree.to_csv(RESULTS / "mtbench_agreement.csv", index=False, float_format=CSV_FLOAT)
     print("\nMT-Bench agreement with the human majority label (repeat 0):")
     print(agree.to_markdown(index=False, floatfmt=".2f"))
     print(f"\nWrote {(RESULTS / 'mtbench_agreement.csv').relative_to(ROOT)}")
 
     paper = mtbench_vs_votes(mt, pairs)
-    paper.to_csv(RESULTS / "mtbench_paper_style.csv", index=False)
+    paper.to_csv(RESULTS / "mtbench_paper_style.csv", index=False, float_format=CSV_FLOAT)
     print("\nMT-Bench paper-style agreement: combined verdict vs each expert vote "
           "(n = comparisons; paper = GPT-4, turn 1):")
     print(paper.to_markdown(index=False, floatfmt=".2f"))
     print(f"\nWrote {(RESULTS / 'mtbench_paper_style.csv').relative_to(ROOT)}")
 
     ceiling = mtbench_human_ceiling(mt, pairs)
-    ceiling.to_csv(RESULTS / "mtbench_human_ceiling.csv", index=False)
+    ceiling.to_csv(RESULTS / "mtbench_human_ceiling.csv", index=False, float_format=CSV_FLOAT)
     print(f"\nMT-Bench human-human ceiling on the {(pairs['votes'].str.len() >= 2).sum()} pairs with 2+ expert votes "
           "(n = comparisons; paper = turn 1):")
     print(ceiling.to_markdown(index=False, floatfmt=".2f"))
@@ -365,7 +366,7 @@ def main():
     sb = sb[first + [c for c in sb.columns if c not in first]]
     if sb["n_null"].sum():
         print(f"warning: {sb['n_null'].sum()} unparsed verdicts left out (see n_null)")
-    sb.to_csv(RESULTS / "secondbrain_agreement.csv", index=False)
+    sb.to_csv(RESULTS / "secondbrain_agreement.csv", index=False, float_format=CSV_FLOAT)
     print(f"\nSecond Brain agreement with human pass/fail (fail = the case to catch), "
           f"bootstrap 95% CIs ({BOOT_N:,} resamples of items, seed {BOOT_SEED}):")
     print(sb.to_markdown(index=False, floatfmt=".2f"))
@@ -375,14 +376,14 @@ def main():
     print(f"\nWrote {(RESULTS / 'secondbrain_agreement.csv').relative_to(ROOT)}")
 
     diffs = secondbrain_diffs(runs, labels, [p["id"] for p in config["prompts"]["secondbrain"]])
-    diffs.to_csv(RESULTS / "secondbrain_diffs.csv", index=False)
+    diffs.to_csv(RESULTS / "secondbrain_diffs.csv", index=False, float_format=CSV_FLOAT)
     print("\nSecond Brain paired differences (a - b, same resampled items for both sides; "
           "excludes_0 = CI does not include 0):")
     print(diffs.to_markdown(index=False, floatfmt=".2f"))
     print(f"\nWrote {(RESULTS / 'secondbrain_diffs.csv').relative_to(ROOT)}")
 
     tags = secondbrain_by_tag(runs, labels)
-    tags.to_csv(RESULTS / "secondbrain_by_tag.csv", index=False)
+    tags.to_csv(RESULTS / "secondbrain_by_tag.csv", index=False, float_format=CSV_FLOAT)
     caught = tags.assign(cell=tags["caught"].astype(str) + "/" + tags["n"].astype(str),
                          col=tags["judge"] + " " + tags["prompt"])
     print("\nSecond Brain human fails caught, by fail tag (caught / fails scored):")
