@@ -53,6 +53,17 @@ Analysis only reads runs/, so re-running it never costs an API call.
   Why: 20 was a budget pick with no stated reason; 4/20 has a 95% CI of ~6–44%, too wide to
   tell Haiku's 4–8% flip rate from noise, and noise varies by pair, so it must be measured on
   the same pairs as the flips. gpt-4o-mini at temperature 0 also disagreed with itself, so both judges need it.
+- Repeat run in ab order only.
+  Why: noise is a property of a single call, so one order is enough to measure it, and it halves
+  the extra calls.
+- Position bias reported as order-flip rate minus same-order noise on the same pairs, plus flip direction.
+  Why: a raw flip rate mixes the order effect with plain call-to-call noise (gpt-4o-mini disagrees
+  with itself even at temperature 0); direction tells a lean toward one position from random flips.
+- Exact McNemar p reported next to the bootstrap CI (10,000 resamples of pairs, seed 42).
+  Why: flips and noise are paired yes/no flags on the same pairs, with only ~15 discordant pairs,
+  so an exact test fits; the CI shows how big the effect is, and the fixed seed makes reruns identical.
+- Position bias broken down by model-rank gap in three groups: 1 / 2 / 3+.
+  Why: tests whether bias hits close pairs; three groups give about 33 pairs each, finer would be too small.
 
 ## Plan (Tue 27 – Fri 30 Oct)
 | Day | Done when this exists |
@@ -61,6 +72,14 @@ Analysis only reads runs/, so re-running it never costs an API call.
 | Wed | All judge runs in both orders -> agreement table + flip rate |
 | Thu | Verbosity test, both-orders fix measured, bootstrap CIs on every number |
 | Fri | README results table, "where judges fail" |
+
+Status (9 Nov):
+- Done: all judge runs in both orders; MT-Bench agreement (with/without ties, paper-style) and
+  human–human ceiling; position bias vs same-order noise on all 100 pairs, with a breakdown by
+  model-rank gap; both-orders fix measured (no clear agreement gain, no CIs yet); Second Brain
+  agreement with bootstrap CIs and paired rubric-vs-generic diffs; Opus 5 added as a strong
+  judge on Second Brain only.
+- Next: bootstrap CIs for MT-Bench agreement, verbosity test, finish the README.
 
 ## Non-goals
 Turn-2 questions, RAGAS, fine-tuning judges, >3 models, other bias types, UI.
